@@ -1,0 +1,178 @@
+using System;
+using System.IO;
+using System.Collections.Generic;
+using Xunit;
+
+using registerPairInput = System.ValueTuple<string, string>;
+using updatePriceInput = System.ValueTuple<string, int>;
+
+[Collection("DivergenceMonitorTests")]
+public class SampleTestCases
+{
+  [Fact]
+  public void SingleViolation() {
+    int threshold = 2;
+    List<object> actions = new List<object>
+    {
+      new registerPairInput("ABC", "DEF"),
+
+      new updatePriceInput("ABC", 100),
+      new updatePriceInput("DEF", 101),
+      
+      new updatePriceInput("ABC", 104)
+    };
+
+    string expectedOutput = "2 ABC 104 DEF 101\n";
+
+    TestRunner.runTest(threshold, actions, new List<string>{expectedOutput});
+  }
+
+  [Fact]
+  public void NoViolations() {
+    int threshold = 2;
+    List<object> actions = new List<object>
+    {
+      new registerPairInput("GOOG", "GOOGL"),
+
+      new updatePriceInput("GOOG", 100),
+      new updatePriceInput("GOOGL", 101),
+
+      new updatePriceInput("GOOG", 102),
+      new updatePriceInput("GOOGL", 103),
+
+      new updatePriceInput("GOOG", 102),
+      new updatePriceInput("GOOGL", 101),
+    };
+    string expectedOutput = "";
+
+    TestRunner.runTest(threshold, actions, new List<string>{expectedOutput});
+  }
+
+  [Fact]
+  public void UnknownProduct() {
+    int threshold = 2;
+    List<object> actions = new List<object>
+    {
+      new registerPairInput("GOOG", "GOOGL"),
+
+      new updatePriceInput("GOOG", 100),
+      new updatePriceInput("GOOGL", 100),
+
+      new updatePriceInput("IBM", 200),
+      new updatePriceInput("GOOG", 103),
+
+      new updatePriceInput("APPL", 300),
+      new updatePriceInput("GOOG", 102),
+    };
+    string expectedOutput = "3 GOOG 103 GOOGL 100\n";
+
+    TestRunner.runTest(threshold, actions, new List<string>{expectedOutput});
+  }
+
+  [Fact]
+  public void MultipleViolations() {
+    int threshold = 2;
+    List<object> actions = new List<object>
+    {
+      new registerPairInput("GOOG", "GOOGL"),
+
+      new updatePriceInput("GOOG", 100),
+      new updatePriceInput("GOOGL", 101),
+
+      new updatePriceInput("GOOG", 104),
+      new updatePriceInput("GOOGL", 107),
+
+      new updatePriceInput("GOOG", 108),
+      new updatePriceInput("GOOGL", 109),
+    };
+    string expectedOutput =
+      "2 GOOG 104 GOOGL 101\n" +
+      "3 GOOGL 107 GOOG 104\n";
+
+    TestRunner.runTest(threshold, actions, new List<string>{expectedOutput});
+  }
+
+  [Fact]
+  public void MultiplePairsNoViolations() {
+    int threshold = 2;
+    List<object> actions = new List<object>
+    {
+      new registerPairInput("GOOG", "GOOGL"),
+      new registerPairInput("CMCSA", "CMCST"),
+
+      new updatePriceInput("GOOG", 100),
+      new updatePriceInput("GOOGL", 101),
+
+      new updatePriceInput("CMCSA", 200),
+      new updatePriceInput("CMCST", 201),
+
+      new updatePriceInput("GOOG", 101),
+      new updatePriceInput("GOOGL", 100),
+
+      new updatePriceInput("CMCSA", 201),
+      new updatePriceInput("CMCST", 200),
+    };
+    string expectedOutput = "";
+
+    TestRunner.runTest(threshold, actions, new List<string>{expectedOutput});
+  }
+
+  [Fact]
+  public void ThreePairsTwoViolations() {
+    int threshold = 2;
+    List<object> actions = new List<object>
+    {
+      new registerPairInput("GOOG", "GOOGL"),
+      new registerPairInput("CMCSA", "CMCST"),
+      new registerPairInput("AAA", "BBB"),
+
+      new updatePriceInput("GOOG", 100),
+      new updatePriceInput("GOOGL", 101),
+
+      new updatePriceInput("CMCSA", 200),
+      new updatePriceInput("CMCST", 201),
+
+      new updatePriceInput("AAA", 300),
+      new updatePriceInput("BBB", 301),
+
+      new updatePriceInput("CMCSA", 198),
+      new updatePriceInput("CMCST", 199),
+
+      new updatePriceInput("AAA", 301),
+      new updatePriceInput("GOOG", 104),
+
+      new updatePriceInput("BBB", 300),
+      new updatePriceInput("GOOGL", 105),
+    };
+    string expectedOutput = 
+      "6 CMCSA 198 CMCST 201\n" +
+      "9 GOOG 104 GOOGL 101\n";
+
+    TestRunner.runTest(threshold, actions, new List<string>{expectedOutput});
+  }
+
+  [Fact]
+  public void OneProductCorrelatesWithTwoOthers() {
+    int threshold = 2;
+    List<object> actions = new List<object>
+    {
+      new registerPairInput("GOOG", "GOOGL"),
+      new registerPairInput("GOOG", "IBM"),
+
+      new updatePriceInput("GOOG", 100),
+      new updatePriceInput("IBM", 105),
+
+      new updatePriceInput("GOOGL", 107),
+      new updatePriceInput("GOOG", 104),
+
+      new updatePriceInput("GOOG", 108),
+    };
+    string expectedOutput =
+      "1 IBM 105 GOOG 100\n" +
+      "2 GOOGL 107 GOOG 100\n" +
+      "3 GOOG 104 GOOGL 107\n" +
+      "4 GOOG 108 IBM 105\n";
+
+    TestRunner.runTest(threshold, actions, new List<string>{expectedOutput});
+  }
+}
